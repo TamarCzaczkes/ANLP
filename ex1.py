@@ -36,6 +36,27 @@ def get_compute_metrics_func(metric):
     return compute_metrics
 
 
+def find_best_model(all_results):
+    accuracies = {}
+    best_accuracy = 0
+    best_model = best_trainer = best_model_name = None
+
+    for model in MODELS:
+        mean_accuracy = np.mean([result[METRIC_NAME] for result in all_results[model]])
+        std_accuracy = np.std([result[METRIC_NAME] for result in all_results[model]])
+        accuracies[model] = {'mean': mean_accuracy, 'std': std_accuracy}
+        if mean_accuracy > best_accuracy:
+            best_model_name = model
+
+    for index, result in enumerate(all_results[best_model_name]):
+        if result[METRIC_NAME] > best_accuracy:
+            best_accuracy = result[METRIC_NAME]
+            best_trainer = result['trainer']
+            best_model = result['model']
+
+    return accuracies, best_model, best_model_name, best_trainer
+
+
 def create_files(accuracies, end_time, predictions, start_time, test_dataset, total_train_time):
     # Save Predictions in predictions.txt file:
     with open(os.path.join(OUTPUT_DIR, 'predictions.txt'), 'w') as f:
@@ -143,25 +164,7 @@ def main():
 
     # 8. Find best model: (the model with the highest mean accuracy on validation set)
 
-    best_accuracy = 0
-    best_model = None
-    best_trainer = None
-    best_model_name = None
-
-    accuracies = {}
-    for model in MODELS:
-        mean_accuracy = np.mean([result[METRIC_NAME] for result in all_results[model]])
-        std_accuracy = np.std([result[METRIC_NAME] for result in all_results[model]])
-        accuracies[model] = {'mean': mean_accuracy, 'std': std_accuracy}
-        if mean_accuracy > best_accuracy:
-            best_model_name = model
-
-    # find the best seed for the best model
-    for index, result in enumerate(all_results[best_model_name]):
-        if result[METRIC_NAME] > best_accuracy:
-            best_accuracy = result[METRIC_NAME]
-            best_trainer = result['trainer']
-            best_model = result['model']
+    accuracies, best_model, best_model_name, best_trainer = find_best_model(all_results)
 
     # 9. Predict:
 
@@ -171,11 +174,9 @@ def main():
     # Removing the `label` columns because it contains -1 and Trainer won't like that.
     test_dataset = test_dataset.remove_columns("label")
 
-    # Run model.eval() before prediction: some layers behave differently during
-    # training, and this command will signal the model that it should be in inference mode.
+    # Run model.eval() before prediction
     best_model.eval()
 
-    # During prediction, unlike during training, you shouldn't pad the samples at all
     start_time = time.time()
     predictions = []
     for i in range(len(test_dataset)):
