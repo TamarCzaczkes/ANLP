@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-import wandb  # todo - uncomment
+# import wandb
 import numpy as np
 from evaluate import load
 from datasets import load_dataset
@@ -9,8 +9,7 @@ from transformers import (
     AutoConfig, AutoModelForSequenceClassification, set_seed,
     AutoTokenizer, EvalPrediction, Trainer, TrainingArguments)
 
-
-# WANDB_API_KEY = "74139a5dfde92426ae83d3e008e3b666476fc20e"  # TODO - remove from here
+# WANDB_API_KEY = "74139a5dfde92426ae83d3e008e3b666476fc20e"
 MODELS = ['bert-base-uncased', 'roberta-base', 'google/electra-base-generator']
 METRIC_NAME = 'accuracy'
 OUTPUT_DIR = r'G:\My Drive\ANLP\ex1\models'
@@ -48,14 +47,13 @@ def create_files(accuracies, end_time, predictions, start_time, test_dataset, to
         for model in MODELS:
             f.write(f'{model},{accuracies[model]["mean"]} +- {accuracies[model]["std"]}\n')
         f.write("----\n")
-        f.write(f'train time,{total_train_time}\n')  # train time in seconds - TODO- in seconds?
-        f.write(f'predict time,{(end_time - start_time)}\n')  # todo - predict time in seconds, where can we get it?
+        f.write(f'train time,{total_train_time}\n')
+        f.write(f'predict time,{(end_time - start_time)}\n')
 
 
 def main():
-    # TODO - login wandb, what do we do with the key?
-    # wandb.login(key=os.environ.get('WANDB_API_KEY'), relogin=True)  # todo - uncomment
-    wandb.login()
+
+    # wandb.login()
 
     # 1. Load arguments:
 
@@ -90,7 +88,7 @@ def main():
             name = f"{model_name.replace('/', '-')}_{seed}"
             path = os.path.join(OUTPUT_DIR, name)
             config = AutoConfig.from_pretrained(model_name)
-            wandb.init(project="ANLP-ex1", dir=OUTPUT_DIR, config=config, name=name)  # todo - uncomment
+            # wandb.init(project="ANLP-ex1", dir=OUTPUT_DIR, config=config, name=name)
 
             tokenizer = AutoTokenizer.from_pretrained(model_name)
 
@@ -106,7 +104,7 @@ def main():
             # 6. Train:
 
             training_args = TrainingArguments(output_dir=path,
-                                              report_to='wandb',
+                                              # report_to='wandb',
                                               run_name=name,
                                               save_strategy='no')
 
@@ -122,7 +120,7 @@ def main():
                               tokenizer=tokenizer)
             if not is_trained:
                 train_result = trainer.train()
-                train_time = train_result.metrics['train_runtime']  # todo - save in a file?
+                train_time = train_result.metrics['train_runtime']
                 with open(os.path.join(path, 'train_time.txt'), 'w') as f:
                     f.write(str(float(train_time)))
 
@@ -139,10 +137,9 @@ def main():
             eval_res = trainer.evaluate(eval_dataset=eval_dataset)
 
             all_results[model_name].append({METRIC_NAME: eval_res['eval_accuracy'],
-                                            'trainer': trainer,
-                                            'model': model})
+                                            'trainer': trainer, 'model': model})
 
-            wandb.finish()  # todo - uncomment
+            # wandb.finish()
 
     # 8. Find best model: (the model with the highest mean accuracy on validation set)
 
